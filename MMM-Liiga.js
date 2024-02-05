@@ -31,9 +31,9 @@ Module.register('MMM-Liiga', {
      * @member {object.<string, string>} modes - Maps mode short codes to names.
      */
     modes: {
-        PR: 'Pre-season',
-        R: 'Regular season',
-        P: 'Playoffs',
+        1: 'Pre-season',
+        2: 'Regular season',
+        3: 'Playoffs',
     },
 
     /**
@@ -120,7 +120,8 @@ Module.register('MMM-Liiga', {
         return {
             en: 'translations/en.json',
             de: 'translations/de.json',
-            fr: 'translations/fr.json'
+            fr: 'translations/fr.json',
+            fi: 'translations/fi.json'
         };
     },
 
