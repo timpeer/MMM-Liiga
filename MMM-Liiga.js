@@ -1,5 +1,5 @@
 /**
- * @file MMM-NHL.js
+ * @file MMM-Liiga.js
  *
  * @author fewieden
  * @license MIT
@@ -26,7 +26,7 @@
  * @requires external:Module
  * @requires external:Log
  */
-Module.register('MMM-NHL', {
+Module.register('MMM-Liiga', {
     /**
      * @member {object.<string, string>} modes - Maps mode short codes to names.
      */
@@ -132,7 +132,7 @@ Module.register('MMM-NHL', {
      * @returns {string[]} List of the style dependency filepaths.
      */
     getStyles() {
-        return ['font-awesome.css', 'MMM-NHL.css'];
+        return ['font-awesome.css', 'MMM-Liiga.css'];
     },
 
     /**
@@ -143,7 +143,7 @@ Module.register('MMM-NHL', {
      * @returns {string} Path to nunjuck template.
      */
     getTemplate() {
-        return 'templates/MMM-NHL.njk';
+        return 'templates/MMM-Liiga.njk';
     },
 
     /**

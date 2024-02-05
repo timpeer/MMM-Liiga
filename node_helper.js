@@ -130,7 +130,9 @@ module.exports = NodeHelper.create({
      * @returns {void}
      */
     async initTeams() {
-        const response = await fetch(`${BASE_URL}/teams`);
+        // const response = await fetch(`${BASE_URL}/teams`);
+
+        const response = await fetch(`https://liiga.fi/api/v2/teams/info`);
 
         if (!response.ok) {
             Log.error(`Initializing NHL teams failed: ${response.status} ${response.statusText}`);
@@ -139,6 +141,8 @@ module.exports = NodeHelper.create({
         }
 
         const { teams } = await response.json();
+
+        console.log('xxx teams', teams);
 
         this.teamMapping = teams.reduce((mapping, team) => {
             mapping[team.id] = team.abbreviation;
