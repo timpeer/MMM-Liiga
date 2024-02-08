@@ -4,7 +4,7 @@ Finnish Major Icehockey league Liiga Module for MagicMirror²
 
 This is fork from https://github.com/fewieden/MMM-NHL module
 
-Big hand to these guys, fewieden and rest of MMM-NHL module contrubutors 
+Big hand to these guys, fewieden and rest of the MMM-NHL module contrubutors 
 https://github.com/fewieden/MMM-NHL/graphs/contributors 
 
 Still on beta, playoffs might not work etc..
