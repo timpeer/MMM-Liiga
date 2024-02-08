@@ -1,4 +1,9 @@
-# MMM-NHL Changelog
+# MMM-Liiga Changelog
+
+
+## [1.0.0]
+
+Fork for Finnish & Liiga with Liiga data-adapter
 
 ## [2.4.0]
 

@@ -127,7 +127,8 @@ module.exports = NodeHelper.create({
             return;
         }
 
-        const response = await fetch(`https://api.nhle.com/stats/rest/en/team`);
+        // const response = await fetch(`https://api.nhle.com/stats/rest/en/team`);
+        const response = await fetch(`https://liiga.fi/api/v2/teams/info`);
 
         if (!response.ok) {
             Log.error(`Initializing NHL teams failed: ${response.status} ${response.statusText}`);
@@ -135,13 +136,28 @@ module.exports = NodeHelper.create({
             return;
         }
 
-        const { data } = await response.json();
+        const infoData = await response.json();
 
-        this.teamMapping = data.reduce((mapping, team) => {
+        this.teamMapping = Object.keys(infoData.teams)
+            .map((teamKey) => infoData.teams[teamKey])
+            .reduce((mapping, team) => {
+                mapping[`${team.id}:${team.name.toLowerCase()}`] = {
+                    name: team.name,
+                    short: team.short_name,
+                    logo: team.logo,
+                };
+                return mapping;
+        }, {});
+
+        // Log.info('xxx initTeams teams', this.teamMapping);
+
+        /*
+        this.teamMapping = infoData.data.reduce((mapping, team) => {
             mapping[team.id] = { short: team.triCode, name: team.fullName };
 
             return mapping;
         }, {});
+        */
     },
 
     /**
@@ -165,11 +181,11 @@ module.exports = NodeHelper.create({
 
         return {
             startUtc: start.toISOString(),
-            startFormatted: new Intl.DateTimeFormat('fr-ca', { timeZone: 'America/Toronto' }).format(start),
+            startFormatted: new Intl.DateTimeFormat('fi-FI', { timeZone: 'Europe/Helsinki' }).format(start),
             endUtc: end.toISOString(),
-            endFormatted: new Intl.DateTimeFormat('fr-ca', { timeZone: 'America/Toronto' }).format(end),
+            endFormatted: new Intl.DateTimeFormat('fi-FI', { timeZone: 'Europe/Helsinki' }).format(end),
             todayUtc: today.toISOString(),
-            todayFormatted: new Intl.DateTimeFormat('fr-ca', { timeZone: 'America/Toronto' }).format(today)
+            todayFormatted: new Intl.DateTimeFormat('fi-FI', { timeZone: 'Europe/Helsinki' }).format(today)
         };
     },
 
@@ -227,18 +243,103 @@ module.exports = NodeHelper.create({
      * @returns {object[]} Raw games from API endpoint.
      */
     async fetchSchedule() {
-        const { startFormatted, endUtc } = this.getScheduleDates();
+        // const { startFormatted, endUtc } = this.getScheduleDates();
 
-        const scheduleUrl = `https://api-web.nhle.com/v1/schedule/${startFormatted}`;
+        const { startUtc, endUtc } = this.getScheduleDates();
+
+        //const scheduleUrl = `https://api-web.nhle.com/v1/schedule/${startFormatted}`;
+
+
+        const regularYr = new Date().getUTCFullYear() - (new Date().getMonth() > 6 ? 1 : 0);
+        const scheduleUrl = `https://liiga.fi/api/v2/games?tournament=runkosarja&season=${regularYr}`;
+
         const scheduleResponse = await fetch(scheduleUrl);
+
         if (!scheduleResponse.ok) {
             Log.error(`Fetching NHL schedule failed: ${scheduleResponse.status} ${scheduleResponse.statusText}. Url: ${scheduleUrl}`);
             return;
         }
 
-        const { gameWeek } = await scheduleResponse.json();
+        // const { gameWeek } = await scheduleResponse.json();
 
-        const schedule = gameWeek.map(({ date, games }) => games.filter(game => game.startTimeUTC < endUtc).map(game => ({ ...game, gameDay: date }))).flat();
+        const gamesArr = await scheduleResponse.json();
+        const gamingDays = gamesArr.reduce((gameDays, game) => {
+            const gameDate = game.start.split('T')[0];
+
+            const periodDesc = () => {
+                if (game.finishedType === 'ACTIVE_OR_NOT_STARTED') {
+                    const curPer = game?.periods?.find((pd) => pd.startTime <= game.gameTime && game.gameTime <= pd.endTime);
+                    return curPer ? {
+                        number: curPer.index,
+                        periodType: "REG"
+                    } : {};
+                } else if (game.finishedType === 'ENDED_DURING_REGULAR_GAME_TIME') {
+                    return {periodType: "REG", number: 3};
+                } else if (game.finishedType === 'ENDED_DURING_EXTENDED_GAME_TIME') {
+                    return {periodType: "OT"};
+                } else if (game.finishedType === 'ENDED_DURING_WINNING_SHOT_COMPETITION') {
+                    return {periodType: "SO"};
+                }
+            };
+
+            const gameState = () => {
+                if (game.finishedType === 'ACTIVE_OR_NOT_STARTED') {
+                    if (game.started) {
+                        if (game.ended) {
+                            return 'OFF';
+                        }
+                        return 'LIVE';
+                    }
+                    return game.gameTime === 0 ? 'PRE' : 'FUT';
+                }
+                return 'OFF';
+            };
+
+            const formattedGame = {
+                game,
+                season: game.season,
+                periodDescriptor: periodDesc(),
+                timeRemaining: game.gameTime,
+                gameState: gameState(),
+                startTimeUTC: game.start,
+                awayTeam: {
+                    id: game.awayTeam.teamId,
+                    score: game.awayTeam.goals,
+                },
+                homeTeam: {
+                    id: game.homeTeam.teamId,
+                    score: game.homeTeam.goals,
+                },
+                gameType: game.serie === 'RUNKOSARJA' ? '2' : '3',
+            };
+
+            let gameDay = gameDays.find((gd) => gd.date === gameDate);
+            if (gameDay){
+                gameDay.games.push(formattedGame);
+            } else {
+                gameDay = {
+                    date: gameDate,
+                    games: [formattedGame],
+                };
+                gameDays.push(gameDay);
+            }
+            return gameDays;
+        }, []);
+
+        const schedule = gamingDays
+            .map(({ date, games }) => games
+                .filter(game => game.startTimeUTC > startUtc && game.startTimeUTC < endUtc)
+                .map(game => ({ ...game, gameDay: date }))).flat();
+
+        Log.info('xxx schedule', JSON.stringify(schedule, null, 2));
+        //Log.info('xxx schedule count', schedule.length);
+
+        /*
+        const schedule = gameWeek
+            .map(({ date, games }) => games
+                .filter(game => game.startTimeUTC < endUtc)
+                .map(game => ({ ...game, gameDay: date }))).flat();
+         */
 
         const scheduleWithRemainingTime = await this.hydrateRemainingTime(schedule);
 
@@ -300,7 +401,7 @@ module.exports = NodeHelper.create({
             return games;
         }
 
-        const date = new Intl.DateTimeFormat('fr-ca', { timeZone: 'America/Toronto' })
+        const date = new Intl.DateTimeFormat('fi-FI', { timeZone: 'Europe/Helsinki' })
             .format(new Date());
 
         const yesterday = games.filter(game => game.gameDay < date);
@@ -386,8 +487,9 @@ module.exports = NodeHelper.create({
 
         return {
             id: team.id,
-            name: this.teamMapping[team.id].name,
-            short: this.teamMapping[team.id].short,
+            name: this.teamMapping[team.id]?.name || '-',
+            short: this.teamMapping[team.id]?.short || '-',
+            logoUrl: this.teamMapping[team.id].logo,
             score: team.score ?? 0
         };
     },
@@ -430,7 +532,7 @@ module.exports = NodeHelper.create({
             status: game.gameState,
             teams: {
                 away: this.parseTeam(game.awayTeam),
-                home: this.parseTeam(game.homeTeam)
+                home: this.parseTeam(game.homeTeam),
             },
             live: {
                 period: this.getNumberWithOrdinal(game.periodDescriptor.number),

@@ -1,23 +1,23 @@
-.MMM-NHL .table {
+.MMM-Liiga .table {
     border-spacing: 10px 0;
     border-collapse: separate;
     text-align: center;
 }
 
-.MMM-NHL .icon {
-    width: 37px;
+.MMM-Liiga .icon {
+    width: 25px;
     height: 25px;
 }
 
-.MMM-NHL .no-color {
+.MMM-Liiga .no-color {
     filter: grayscale(100%);
 }
 
-.MMM-NHL .row {
+.MMM-Liiga .row {
     vertical-align: middle;
 }
 
-.MMM-NHL .live {
+.MMM-Liiga .live {
     font-size: 10px;
     line-height: 15px;
     display: block;

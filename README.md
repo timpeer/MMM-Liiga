@@ -1,10 +1,17 @@
 # MMM-NHL [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://raw.githubusercontent.com/fewieden/MMM-NHL/master/LICENSE) ![Build status](https://github.com/fewieden/MMM-NHL/workflows/build/badge.svg) [![Code Climate](https://codeclimate.com/github/fewieden/MMM-NHL/badges/gpa.svg?style=flat)](https://codeclimate.com/github/fewieden/MMM-NHL) [![Known Vulnerabilities](https://snyk.io/test/github/fewieden/mmm-nhl/badge.svg)](https://snyk.io/test/github/fewieden/mmm-nhl)
 
-National Hockey League Module for MagicMirror²
+Finnish Major Icehockey league Liiga Module for MagicMirror²
+
+This is fork from https://github.com/fewieden/MMM-NHL module
+
+Big hand to these guys, fewieden and rest of MMM-NHL module contrubutors 
+https://github.com/fewieden/MMM-NHL/graphs/contributors 
+
+Still on beta, playoffs might not work etc..
 
 ## Examples
 
-![](.github/example_nhl.png) ![](.github/example_nhl_2.png) ![](.github/example_nhl_3.png) ![](.github/example_nhl_4.png) ![](.github/example_nhl_5.png)
+![](.github/example_liiga.png)
 
 ## Dependencies
 
@@ -19,7 +26,7 @@ National Hockey League Module for MagicMirror²
 
 ```js
 {
-    module: 'MMM-NHL',
+    module: 'MMM-Liiga',
     position: 'top_right',
     config: {
         // Add your config options here, which have a different value than default.
@@ -27,7 +34,7 @@ National Hockey League Module for MagicMirror²
 }
 ```
 
-* Run command `npm i --production` in `~/MagicMirror/modules/MMM-NHL` directory.
+* Run command `npm i --production` in `~/MagicMirror/modules/MMM-Liiga` directory.
 
 ## Config Options
 

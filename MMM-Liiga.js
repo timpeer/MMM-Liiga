@@ -20,7 +20,7 @@
  */
 
 /**
- * @module MMM-NHL
+ * @module MMM-Liiga
  * @description Frontend of the MagicMirror² module.
  *
  * @requires external:Module
