@@ -127,7 +127,6 @@ module.exports = NodeHelper.create({
             return;
         }
 
-        // const response = await fetch(`https://api.nhle.com/stats/rest/en/team`);
         const response = await fetch(`https://liiga.fi/api/v2/teams/info`);
 
         if (!response.ok) {
@@ -148,16 +147,6 @@ module.exports = NodeHelper.create({
                 };
                 return mapping;
         }, {});
-
-        // Log.info('xxx initTeams teams', this.teamMapping);
-
-        /*
-        this.teamMapping = infoData.data.reduce((mapping, team) => {
-            mapping[team.id] = { short: team.triCode, name: team.fullName };
-
-            return mapping;
-        }, {});
-        */
     },
 
     /**
@@ -236,6 +225,86 @@ module.exports = NodeHelper.create({
     },
 
     /**
+     * @function formatLiigaGameState
+     * @description Helper function parse Liiga game data into compatible format for the app
+     *
+     * @returns {object} game state
+     */
+    formatLiigaGameState(game) {
+        if (game.finishedType === 'ACTIVE_OR_NOT_STARTED') {
+            if (game.started) {
+                if (game.ended) {
+                    return 'OFF';
+                }
+                return 'LIVE';
+            }
+            return game.gameTime === 0 ? 'PRE' : 'FUT';
+        }
+        return 'OFF';
+    },
+
+    /**
+     * @function formatLiigaPeriod
+     * @description Helper function parse Liiga game data into compatible format for the app
+     *
+     * @returns {object} game periodDescriptor
+     */
+    formatLiigaPeriod(game) {
+        if (game.finishedType === 'ACTIVE_OR_NOT_STARTED') {
+            const curPer = game?.periods?.find((pd) => pd.startTime <= game.gameTime && game.gameTime <= pd.endTime);
+
+            function fmtMSS() {
+                let s = game.gameTime - curPer?.startTime;
+                return (s - (s%=60)) / 60 + (9 < s ? ':' : ':0') + s;
+            }
+
+            return curPer ? {
+                number: curPer.index,
+                periodTime: fmtMSS(),
+                periodType: "REG"
+            } : {};
+        } else if (game.finishedType === 'ENDED_DURING_REGULAR_GAME_TIME') {
+            return {periodType: "REG", number: 3};
+        } else if (game.finishedType === 'ENDED_DURING_EXTENDED_GAME_TIME') {
+            return {periodType: "OT"};
+        } else if (game.finishedType === 'ENDED_DURING_WINNING_SHOT_COMPETITION') {
+            return {periodType: "SO"};
+        }
+    },
+
+    /**
+     * @function formatLiigaGame
+     * @description Helper function parse Liiga game data into compatible format for the app
+     *
+     * @returns {object} game data
+     */
+    formatLiigaGame(game) {
+        const periodDesc = this.formatLiigaPeriod(game);
+
+        const formattedGame = {
+            //...game,
+            gameDay: game.start.split('T')[0],
+            season: game.season,
+            periodDescriptor: periodDesc,
+            timeRemaining: periodDesc.periodTime,
+            gameState: this.formatLiigaGameState(game),
+            startTimeUTC: game.start,
+            awayTeam: {
+                id: game.awayTeam.teamId,
+                score: game.awayTeam.goals,
+            },
+            homeTeam: {
+                id: game.homeTeam.teamId,
+                score: game.homeTeam.goals,
+            },
+            gameType: game.serie === 'RUNKOSARJA' ? '2' : '3',
+        };
+
+        return formattedGame;
+    },
+
+
+    /**
      * @function fetchSchedule
      * @description Retrieves a list of games from the API with timespan based on config options.
      * @async
@@ -255,110 +324,20 @@ module.exports = NodeHelper.create({
             return;
         }
 
-        const allGames = await scheduleResponse.json();
+        const games = await scheduleResponse.json();
 
-        const gamingDays = allGames.reduce((gameDays, game) => {
-            const gameDate = game.start.split('T')[0];
+        const schedule = games
+                .map(game => this.formatLiigaGame(game))
+                .filter(game => game.startTimeUTC > startUtc && game.startTimeUTC < endUtc);
 
-            const periodDesc = () => {
-                if (game.finishedType === 'ACTIVE_OR_NOT_STARTED') {
-                    const curPer = game?.periods?.find((pd) => pd.startTime <= game.gameTime && game.gameTime <= pd.endTime);
-
-                    function fmtMSS() {
-                        let s = game.gameTime - curPer?.startTime;
-                        Log.info('yyy', s);
-                        return (s - (s%=60)) / 60 + (9 < s ? ':' : ':0') + s;
-                    }
-
-                    return curPer ? {
-                        number: curPer.index,
-                        periodTime: fmtMSS(),
-                        periodType: "REG"
-                    } : {};
-                } else if (game.finishedType === 'ENDED_DURING_REGULAR_GAME_TIME') {
-                    return {periodType: "REG", number: 3};
-                } else if (game.finishedType === 'ENDED_DURING_EXTENDED_GAME_TIME') {
-                    return {periodType: "OT"};
-                } else if (game.finishedType === 'ENDED_DURING_WINNING_SHOT_COMPETITION') {
-                    return {periodType: "SO"};
-                }
-            };
-
-            const gameState = () => {
-                if (game.finishedType === 'ACTIVE_OR_NOT_STARTED') {
-                    if (game.started) {
-                        if (game.ended) {
-                            return 'OFF';
-                        }
-                        return 'LIVE';
-                    }
-                    return game.gameTime === 0 ? 'PRE' : 'FUT';
-                }
-                return 'OFF';
-            };
-
-            const formattedGame = {
-                ...game,
-                season: game.season,
-                periodDescriptor: periodDesc(),
-                timeRemaining: periodDesc().periodTime,
-                timeRemaining2: game.gameTime,
-                gameState: gameState(),
-                startTimeUTC: game.start,
-                awayTeam: {
-                    id: game.awayTeam.teamId,
-                    score: game.awayTeam.goals,
-                },
-                homeTeam: {
-                    id: game.homeTeam.teamId,
-                    score: game.homeTeam.goals,
-                },
-                gameType: game.serie === 'RUNKOSARJA' ? '2' : '3',
-            };
-
-            let gameDay = gameDays.find((gd) => gd.date === gameDate);
-            if (gameDay){
-                gameDay.games.push(formattedGame);
-            } else {
-                gameDay = {
-                    date: gameDate,
-                    games: [formattedGame],
-                };
-                gameDays.push(gameDay);
-            }
-            return gameDays;
-        }, []);
-
-        const schedule = gamingDays
-            .map(({ date, games }) => games
-                .filter(game => game.startTimeUTC > startUtc && game.startTimeUTC < endUtc)
-                .map(game => ({ ...game, gameDay: date }))).flat();
-
-        // Log.info('xxx schedule', JSON.stringify(schedule, null, 2));
-
-
+        /*
         Log.info('xxx schedule', JSON.stringify(
             schedule.filter((g) => g.gameDay === '2024-02-10'),
             null, 2)
         );
-
-
-
-        //Log.info('xxx schedule count', schedule.length);
-
-        /*
-        const schedule = gameWeek
-            .map(({ date, games }) => games
-                .filter(game => game.startTimeUTC < endUtc)
-                .map(game => ({ ...game, gameDay: date }))).flat();
-         */
-
-        // ei tarvita?
-        // const scheduleWithRemainingTime = await this.hydrateRemainingTime(schedule);
+        */
 
         return schedule;
-
-        //return scheduleWithRemainingTime;
     },
 
     /**
@@ -369,6 +348,11 @@ module.exports = NodeHelper.create({
      * @returns {object} Raw playoff data from API endpoint.
      */
     async fetchPlayoffs() {
+
+        const scheduleUrl =
+            `https://liiga.fi/api/v2/games?tournament=playoffs&season=${new Date().getUTCFullYear()}`;
+
+
         // TODO: Find playoff endpoints in new API
         const response = await fetch(BASE_PLAYOFF_URL);
 
@@ -443,17 +427,14 @@ module.exports = NodeHelper.create({
     computeSeasonDetails(schedule) {
         const game = schedule.find(game => game.gameState !== 'OFF') || schedule[schedule.length - 1];
 
-        // new Date().getUTCFullYear() - (new Date().getMonth() > 6 ? 1 : 0);
-
         const yrs = [game.season.toString().slice(-2)];
         const [yrsAdd, yrDelta] = new Date().getMonth() > 6 ?
             [(e) => yrs.push(e), 1] :
             [(e) => yrs.unshift(e), -1];
-        yrsAdd(  (game.season + yrDelta).toString().slice(-2)  );
+        yrsAdd((game.season + yrDelta).toString().slice(-2));
 
         if (game) {
             return {
-                //year: `${game.season.toString().slice(2, 4)}/${game.season.toString().slice(6, 8)}`,
                 year: yrs.join('-'),
                 mode: game.gameType
             };
