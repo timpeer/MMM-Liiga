@@ -10,7 +10,10 @@
   "FINAL": "Final",
   "FINAL_OT": "Final (OT)",
   "FINAL_SO": "Final (SO)",
-  "TIME_LEFT": "{TIME} left",
+  "TIME_LEFT": "{TIME}",
   "POSTPONED": "PPD",
-  "SERIES": "Series"
+  "SERIES": "Series",
+  "MODE-1": "Pre-season",
+  "MODE-2": "Regular season",
+  "MODE-3": "Playoffs"
 }

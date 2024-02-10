@@ -10,7 +10,7 @@
   "FINAL": "Beendet",
   "FINAL_OT": "Beendet (OT)",
   "FINAL_SO": "Beendet (SO)",
-  "TIME_LEFT": "{TIME} übrig",
+  "TIME_LEFT": "{TIME}",
   "POSTPONED": "Verlegt",
   "SERIES": "Serie"
 }

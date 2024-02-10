@@ -10,7 +10,11 @@
   "FINAL": "Päättynyt",
   "FINAL_OT": "Päättynyt (JA)",
   "FINAL_SO": "Päättynyt (VL)",
-  "TIME_LEFT": "{TIME} jäljellä",
+  "TIME_LEFT": "{TIME}",
   "POSTPONED": "Siirretty",
-  "SERIES": "Sarja"
+  "SERIES": "Sarja",
+  "Regular season": "Runkosarja",
+  "MODE-1": "Harjoitusottelut",
+  "MODE-2": "Runkosarja",
+  "MODE-3": "Pudotuspelit"
 }

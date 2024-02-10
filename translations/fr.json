@@ -10,7 +10,7 @@
   "FINAL": "Final",
   "FINAL_OT": "Final (OT)",
   "FINAL_SO": "Final (SO)",
-  "TIME_LEFT": "{TIME} restant",
+  "TIME_LEFT": "{TIME}",
   "POSTPONED": "REM",
   "SERIES": "Séries"
 }

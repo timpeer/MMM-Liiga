@@ -243,15 +243,10 @@ module.exports = NodeHelper.create({
      * @returns {object[]} Raw games from API endpoint.
      */
     async fetchSchedule() {
-        // const { startFormatted, endUtc } = this.getScheduleDates();
-
         const { startUtc, endUtc } = this.getScheduleDates();
 
-        //const scheduleUrl = `https://api-web.nhle.com/v1/schedule/${startFormatted}`;
-
-
-        const regularYr = new Date().getUTCFullYear() - (new Date().getMonth() > 6 ? 1 : 0);
-        const scheduleUrl = `https://liiga.fi/api/v2/games?tournament=runkosarja&season=${regularYr}`;
+        const seasonYear = new Date().getUTCFullYear() - (new Date().getMonth() > 6 ? 1 : 0);
+        const scheduleUrl = `https://liiga.fi/api/v2/games?tournament=runkosarja&season=${seasonYear}`;
 
         const scheduleResponse = await fetch(scheduleUrl);
 
@@ -260,17 +255,24 @@ module.exports = NodeHelper.create({
             return;
         }
 
-        // const { gameWeek } = await scheduleResponse.json();
+        const allGames = await scheduleResponse.json();
 
-        const gamesArr = await scheduleResponse.json();
-        const gamingDays = gamesArr.reduce((gameDays, game) => {
+        const gamingDays = allGames.reduce((gameDays, game) => {
             const gameDate = game.start.split('T')[0];
 
             const periodDesc = () => {
                 if (game.finishedType === 'ACTIVE_OR_NOT_STARTED') {
                     const curPer = game?.periods?.find((pd) => pd.startTime <= game.gameTime && game.gameTime <= pd.endTime);
+
+                    function fmtMSS() {
+                        let s = game.gameTime - curPer?.startTime;
+                        Log.info('yyy', s);
+                        return (s - (s%=60)) / 60 + (9 < s ? ':' : ':0') + s;
+                    }
+
                     return curPer ? {
                         number: curPer.index,
+                        periodTime: fmtMSS(),
                         periodType: "REG"
                     } : {};
                 } else if (game.finishedType === 'ENDED_DURING_REGULAR_GAME_TIME') {
@@ -296,10 +298,11 @@ module.exports = NodeHelper.create({
             };
 
             const formattedGame = {
-                game,
+                ...game,
                 season: game.season,
                 periodDescriptor: periodDesc(),
-                timeRemaining: game.gameTime,
+                timeRemaining: periodDesc().periodTime,
+                timeRemaining2: game.gameTime,
                 gameState: gameState(),
                 startTimeUTC: game.start,
                 awayTeam: {
@@ -331,7 +334,16 @@ module.exports = NodeHelper.create({
                 .filter(game => game.startTimeUTC > startUtc && game.startTimeUTC < endUtc)
                 .map(game => ({ ...game, gameDay: date }))).flat();
 
-        Log.info('xxx schedule', JSON.stringify(schedule, null, 2));
+        // Log.info('xxx schedule', JSON.stringify(schedule, null, 2));
+
+
+        Log.info('xxx schedule', JSON.stringify(
+            schedule.filter((g) => g.gameDay === '2024-02-10'),
+            null, 2)
+        );
+
+
+
         //Log.info('xxx schedule count', schedule.length);
 
         /*
@@ -341,9 +353,12 @@ module.exports = NodeHelper.create({
                 .map(game => ({ ...game, gameDay: date }))).flat();
          */
 
-        const scheduleWithRemainingTime = await this.hydrateRemainingTime(schedule);
+        // ei tarvita?
+        // const scheduleWithRemainingTime = await this.hydrateRemainingTime(schedule);
 
-        return scheduleWithRemainingTime;
+        return schedule;
+
+        //return scheduleWithRemainingTime;
     },
 
     /**
@@ -428,9 +443,18 @@ module.exports = NodeHelper.create({
     computeSeasonDetails(schedule) {
         const game = schedule.find(game => game.gameState !== 'OFF') || schedule[schedule.length - 1];
 
+        // new Date().getUTCFullYear() - (new Date().getMonth() > 6 ? 1 : 0);
+
+        const yrs = [game.season.toString().slice(-2)];
+        const [yrsAdd, yrDelta] = new Date().getMonth() > 6 ?
+            [(e) => yrs.push(e), 1] :
+            [(e) => yrs.unshift(e), -1];
+        yrsAdd(  (game.season + yrDelta).toString().slice(-2)  );
+
         if (game) {
             return {
-                year: `${game.season.toString().slice(2, 4)}/${game.season.toString().slice(6, 8)}`,
+                //year: `${game.season.toString().slice(2, 4)}/${game.season.toString().slice(6, 8)}`,
+                year: yrs.join('-'),
                 mode: game.gameType
             };
         }
@@ -440,7 +464,7 @@ module.exports = NodeHelper.create({
         const nextYear = (year + 1).toString().slice(-2);
 
         return {
-            year: `${currentYear}/${nextYear}`,
+            year: `${currentYear}-${nextYear}`,
             mode: 1
         };
     },
